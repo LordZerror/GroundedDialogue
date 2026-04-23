@@ -1,7 +1,9 @@
 import requests
-
+import random
 DEFAULT_URL = 'http://127.0.0.1:8080'
 DEFAULT_HEADERS = { 'Content-Type': 'application/json' }
+_chat_histories = {}
+DEFAULT_SYSTEM_PROMPT = "You are a CS tutoring assistant."
 
 # Part 1: Simple no-context query
 
@@ -20,101 +22,62 @@ def ask(prompt):
 
 # print(ask("What is the capital of Oklahoma?"))
 
-# Part 2: Multi-turn chats
-
-_chat_histories = dict()
-
-def chat(id, prompt):
-    global _chat_histories
-    if id not in _chat_histories: 
-        _chat_histories[id] = [ { "role": "system", 
-                                 "content": "You are a helpful assistant." } ]
-    user_message = { "role": "user", "content": prompt }
-    _chat_histories[id].append(user_message)
-    data = { "messages": _chat_histories[id] }
-    response = requests.post(f"{DEFAULT_URL}/v1/chat/completions", 
-                             headers=DEFAULT_HEADERS, 
-                             json=data)
-    response.raise_for_status
-    _chat_histories[id].append(response.json()['choices'][0]['message'])
-    text = response.json()['choices'][0]['message']['content'].strip()
-    return(text)
-
-#print(chat("oklahoma", "What is the capital of Oklahoma?"))
-#print(chat("oklahoma", "What state is just south of there?"))
-
 # Part 3: JSON Schema-constrained generation
 
 import json
+# Part 2: Multi-turn chats
+def chat(session_id: str, prompt: str, system_prompt: str | None = None, reset: bool = False) -> str:
+    global _chat_histories
 
-def ask_schema(prompt, schema):
-    data = { "messages": [ 
-                { "role": "system", "content": "You are a helpful assistant." },
-                { "role": "user", "content": prompt }
-                ],
-             "response_format": {"type": "json_object", "schema": schema}
-            }
-    response = requests.post(f"{DEFAULT_URL}/v1/chat/completions", 
-                             headers=DEFAULT_HEADERS, 
-                             json=data)
+    if reset or session_id not in _chat_histories:
+        _chat_histories[session_id] = [
+            {"role": "system", "content": system_prompt or DEFAULT_SYSTEM_PROMPT}
+        ]
+    elif system_prompt and _chat_histories[session_id][0]["content"] != system_prompt:
+        _chat_histories[session_id][0] = {"role": "system", "content": system_prompt}
+
+    _chat_histories[session_id].append({"role": "user", "content": prompt})
+
+    data = {"messages": _chat_histories[session_id]}
+    response = requests.post(
+        f"{DEFAULT_URL}/v1/chat/completions",
+        headers=DEFAULT_HEADERS,
+        json=data,
+    )
     response.raise_for_status()
-    text = response.json()['choices'][0]['message']['content'].strip()
-    obj = json.loads(text)
-    return(obj)
 
-YES_NO_SCHEMA = { "type": "string", "enum": ["yes", "no"] }
+    message = response.json()["choices"][0]["message"]
+    _chat_histories[session_id].append(message)
+    return message["content"].strip()
 
-
-def ask_schema_pronouns(prompt, pronounEnum):
-    pronounSchema = { "type": "string", "enum": pronounEnum }
-
-    data = { "messages": [ 
-                { "role": "system", "content": "You are an expert in pronoun resolution." },
-                { "role": "user", "content": prompt }
-                ],
-             "response_format": {"type": "json_object", "schema": pronounSchema}
-            }
-    response = requests.post(f"{DEFAULT_URL}/v1/chat/completions", 
-                             headers=DEFAULT_HEADERS, 
-                             json=data)
-    response.raise_for_status()
-    text = response.json()['choices'][0]['message']['content'].strip()
-    obj = json.loads(text)
-    return(obj)
 
 Question_Answer = {
     "type": "object",
     "properties": {
-        "Questions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "skillLevel": {
-                        "type": "string",
-                        "enum": ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
-                    },
-                    "question": {
-                        "type": "string"
-                    },
-                    "options": {
-                        "type": "object",
-                        "properties": {
-                            "A": {"type": "string"},
-                            "B": {"type": "string"},
-                            "C": {"type": "string"},
-                            "D": {"type": "string"}
-                        },
-                        "required": ["A", "B", "C", "D"],
-                        "additionalProperties": False
-                    }
-                },
-                "required": ["skillLevel", "question", "options"],
-                "additionalProperties": False
-            }
+        "skillLevel": {
+            "type": "string",
+            "enum": ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
+        },
+        "question": {
+            "type": "string"
+        },
+        "options": {
+            "type": "object",
+            "properties": {
+                "A": {"type": "string"},
+                "B": {"type": "string"},
+                "C": {"type": "string"},
+                "D": {"type": "string"}
+            },
+            "required": ["A", "B", "C", "D"],
+            "additionalProperties": False
+        },
+        "answer": {
+            "type": "string",
+            "enum": ["A", "B", "C", "D"]
         }
     },
-    "required": ["Questions"],
+    "required": ["skillLevel", "question", "options", "answer"],
     "additionalProperties": False
 }
 
@@ -136,11 +99,23 @@ The following are Bloom’s skills and some example questions corresponding to d
 5. Skill: Evaluate, Example: {Evaluate_question}
 6. Skill: Create, Example: {Create_question}
 User_Topic = {{topic}}
-You are supposed to create one multiple choice question along with options corresponding to each level in revised Bloom’s taxonomy for the User_Topic. 
+user_skill = {{skill}}
+You are supposed to create one multiple choice question along with options corresponding to user_skill in revised Bloom’s taxonomy for the User_Topic. 
 Keep the answer choices short and to the point.
 These questions are created to evaluate students on a range of cognitive skills, from basic knowledge to critical thinking and problem-solving.
 """
 
+#dictionary of dictionaries - to increase difficulty level as per user request
+profSkillMapping = {
+    "beginner": ["Remember", "Understand"],
+    "intermediate": ["Remember", "Understand", "Apply", "Analyze"],
+    "proficient": ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
+}
+
+def retrieveQuestion(topic, profLevel):
+    skillToTest=random.choice(profSkillMapping[profLevel])
+    updated_prompt = bloom_prompt.replace("{topic}", topic).replace("{skill}", skillToTest)
+    return bloomGeneration(topic, prompt=updated_prompt, schema=Question_Answer)
 
 def bloomGeneration(topic, prompt, schema):
     updated_prompt = prompt.replace("{topic}", topic)
@@ -156,8 +131,5 @@ def bloomGeneration(topic, prompt, schema):
                              json=data)
     response.raise_for_status()
     text = response.json()['choices'][0]['message']['content'].strip()
+    print(text)
     return(text)
-
-print(bloomGeneration("neural networks", bloom_prompt, Question_Answer))
-
-print(bloomGeneration("knowledge graphs", bloom_prompt, Question_Answer))
