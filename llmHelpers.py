@@ -1,5 +1,10 @@
-import requests
+from __future__ import annotations
+
+import json
 import random
+
+import requests
+
 DEFAULT_URL = 'http://127.0.0.1:8080'
 DEFAULT_HEADERS = { 'Content-Type': 'application/json' }
 _chat_histories = {}
@@ -8,23 +13,28 @@ DEFAULT_SYSTEM_PROMPT = "You are a CS tutoring assistant."
 # Part 1: Simple no-context query
 
 def ask(prompt):
-    data = { "messages": [ 
-                { "role": "system", "content": "You are a helpful assistant." }, # First message is always the system prompt
-                { "role": "user", "content": prompt }
-                ]
-            }
-    response = requests.post(f"{DEFAULT_URL}/v1/chat/completions", 
-                             headers=DEFAULT_HEADERS, 
-                             json=data)
-    response.raise_for_status()
-    text = response.json()['choices'][0]['message']['content'].strip()
-    return(text)
+    message = complete_messages([
+        { "role": "system", "content": "You are a helpful assistant." },
+        { "role": "user", "content": prompt },
+    ])
+    return message["content"].strip()
 
 # print(ask("What is the capital of Oklahoma?"))
 
-# Part 3: JSON Schema-constrained generation
+def complete_messages(messages, response_format=None):
+    data = {"messages": messages}
+    if response_format is not None:
+        data["response_format"] = response_format
 
-import json
+    response = requests.post(
+        f"{DEFAULT_URL}/v1/chat/completions",
+        headers=DEFAULT_HEADERS,
+        json=data,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]
+
+
 # Part 2: Multi-turn chats
 def chat(session_id: str, prompt: str, system_prompt: str | None = None, reset: bool = False) -> str:
     global _chat_histories
@@ -38,15 +48,7 @@ def chat(session_id: str, prompt: str, system_prompt: str | None = None, reset: 
 
     _chat_histories[session_id].append({"role": "user", "content": prompt})
 
-    data = {"messages": _chat_histories[session_id]}
-    response = requests.post(
-        f"{DEFAULT_URL}/v1/chat/completions",
-        headers=DEFAULT_HEADERS,
-        json=data,
-    )
-    response.raise_for_status()
-
-    message = response.json()["choices"][0]["message"]
+    message = complete_messages(_chat_histories[session_id])
     _chat_histories[session_id].append(message)
     return message["content"].strip()
 
@@ -119,17 +121,14 @@ def retrieveQuestion(topic, profLevel):
 
 def bloomGeneration(topic, prompt, schema):
     updated_prompt = prompt.replace("{topic}", topic)
-    data = { "messages": [ 
-                { "role": "system", "content": "You are an experienced computer science instructor for a graduate-level course based in the Computer Science Ontology by Knowledge Media Institute" }, # First message is always the system prompt
-                { "role": "user", "content": updated_prompt }
-                ],
-                "response_format": {"type": "json_object", "schema": schema}
-
-            }
-    response = requests.post(f"{DEFAULT_URL}/v1/chat/completions", 
-                             headers=DEFAULT_HEADERS, 
-                             json=data)
-    response.raise_for_status()
-    text = response.json()['choices'][0]['message']['content'].strip()
-    print(text)
-    return(text)
+    message = complete_messages(
+        [
+            {
+                "role": "system",
+                "content": "You are an experienced computer science instructor for a graduate-level course based in the Computer Science Ontology by Knowledge Media Institute",
+            },
+            {"role": "user", "content": updated_prompt},
+        ],
+        response_format={"type": "json_object", "schema": schema},
+    )
+    return message["content"].strip()
