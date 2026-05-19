@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuestBoard — Rebuild the Digital Realm</title>
+    <style>
+      :root {
+        --bg: #0f0f1a;
+        --card: #1a1a2e;
+        --accent: #7c3aed;
+        --accent2: #f59e0b;
+        --easy: #22c55e;
+        --medium: #f59e0b;
+        --hard: #ef4444;
+        --text: #e2e8f0;
+        --muted: #64748b;
+        --border: #2d2d44;
+        --build: #a78bfa;
+        --grind: #f59e0b;
+        --life: #22c55e;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* INTRO SCREEN */
+      .intro {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+        transition: opacity 0.6s, transform 0.6s;
+      }
+      .intro.hide {
+        opacity: 0;
+        transform: scale(1.05);
+        pointer-events: none;
+      }
+      .intro h1 {
+        font-size: 2.5rem;
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          var(--accent2),
+          var(--easy)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+      }
+      .intro .intro-sub {
+        color: var(--muted);
+        font-size: 1rem;
+        margin-bottom: 2rem;
+        max-width: 420px;
+        line-height: 1.6;
+      }
+      .intro .lore {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 2rem;
+        max-width: 480px;
+        text-align: left;
+        font-size: 0.85rem;
+        line-height: 1.7;
+        color: #cbd5e1;
+      }
+      .intro .lore strong {
+        color: var(--accent2);
+      }
+      .play-btn {
+        background: linear-gradient(135deg, var(--accent), #6d28d9);
+        color: #fff;
+        border: none;
+        padding: 0.9rem 2.5rem;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .play-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+      }
+
+      /* HEADER */
+      .header {
+        background: linear-gradient(135deg, var(--card), #1e1e3a);
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      .header h1 {
+        font-size: 1.3rem;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .header .sub {
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .header-r {
+        text-align: right;
+      }
+      .header-r .dt {
+        font-size: 0.7rem;
+        color: var(--muted);
+      }
+      .streak-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent2);
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-top: 4px;
+      }
+
+      /* XP BAR */
+      .xp-w {
+        padding: 0.4rem 1.5rem 0.2rem;
+      }
+      .xp-lbl {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.65rem;
+        color: var(--muted);
+        margin-bottom: 2px;
+      }
+      .xp-trk {
+        height: 5px;
+        background: var(--border);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .xp-fl {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        border-radius: 3px;
+        transition: width 0.5s;
+      }
+
+      /* TABS */
+      .tbar {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        background: var(--card);
+        position: sticky;
+        top: 72px;
+        z-index: 40;
+      }
+      .tb {
+        flex: 1;
+        padding: 0.6rem 0.3rem;
+        text-align: center;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--muted);
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+      }
+      .tb:hover {
+        color: var(--text);
+      }
+      .tb.on {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+      .tpanel {
+        display: none;
+      }
+      .tpanel.on {
+        display: block;
+      }
+
+      /* STATS */
+      .srow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+        padding: 0.6rem 1.5rem;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+      }
+      .st {
+        text-align: center;
+        padding: 0.5rem 0.3rem;
+      }
+      .st .v {
+        font-size: 1.2rem;
+        font-weight: 700;
+      }
+      .st .l {
+        font-size: 0.6rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 1px;
+      }
+      .st.xp .v {
+        color: var(--accent);
+      }
+      .st.lv .v {
+        color: var(--accent2);
+      }
+      .st.sk .v {
+        color: #38bdf8;
+      }
+      .st.dn .v {
+        color: var(--easy);
+      }
+
+      /* CATEGORY SECTION */
+      .cat-section {
+        padding: 0.5rem 1.5rem 0.3rem;
+      }
+      .cat-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        margin-top: 0.75rem;
+      }
+      .cat-icon {
+        font-size: 1.1rem;
+      }
+      .cat-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .cat-lbl.build {
+        color: var(--build);
+      }
+      .cat-lbl.grind {
+        color: var(--grind);
+      }
+      .cat-lbl.life {
+        color: var(--life);
+      }
+      .cat-bar {
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 0.2rem;
+      }
+      .cat-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.4s;
+      }
+      .cat-bar-fill.build {
+        background: var(--build);
+      }
+      .cat-bar-fill.grind {
+        background: var(--grind);
+      }
+      .cat-bar-fill.life {
+        background: var(--life);
+      }
+      .cat-pct {
+        font-size: 0.6rem;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      /* TASK CARDS */
+      .task-section {
+        padding: 0.3rem 1.5rem 2rem;
+      }
+      .tc {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        padding: 0.8rem 0.9rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        transition: all 0.2s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+      .tc:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+      }
+      .tc.done {
+        opacity: 0.45;
+        border-color: var(--easy);
+      }
+      .tc.done .tt {
+        text-decoration: line-through;
+      }
+      .tc.locked {
+        opacity: 0.3;
+        cursor: not-allowed;
+        filter: grayscale(0.5);
+      }
+      .tc.locked:hover {
+        transform: none;
+        border-color: var(--border);
+      }
+      .tc.needed {
+        border-color: var(--accent);
+        box-shadow: 0 0 8px rgba(124, 58, 237, 0.2);
+      }
+      .tchk {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+      }
+      .tc.done .tchk {
+        border-color: var(--easy);
+        background: var(--easy);
+        color: #fff;
+      }
+      .tc.locked .tchk {
+        border-color: var(--muted);
+      }
+      .ti {
+        flex: 1;
+      }
+      .tt {
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .tm {
+        display: flex;
+        gap: 0.35rem;
+        margin-top: 0.25rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .lt {
+        font-size: 0.6rem;
+        padding: 1px 7px;
+        border-radius: 999px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .lt.easy {
+        background: rgba(34, 197, 94, 0.1);
+        color: var(--easy);
+      }
+      .lt.medium {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--medium);
+      }
+      .lt.hard {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--hard);
+      }
+      .cat-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+      .cat-dot.build {
+        background: var(--build);
+      }
+      .cat-dot.grind {
+        background: var(--grind);
+      }
+      .cat-dot.life {
+        background: var(--life);
+      }
+      .tpts {
+        font-size: 0.65rem;
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .chain-badge {
+        font-size: 0.55rem;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent2);
+        font-weight: 700;
+      }
+      .tr {
+        text-align: right;
+      }
+      .tr .bg {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--accent2);
+      }
+      .tr .sm {
+        font-size: 0.55rem;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+      .lock-reason {
+        font-size: 0.6rem;
+        color: var(--muted);
+        font-style: italic;
+        margin-top: 0.2rem;
+      }
+
+      /* PROGRESS RING */
+      .ring-sec {
+        padding: 1.2rem 1.5rem;
+        text-align: center;
+      }
+      .ring-w {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        margin: 0 auto 0.8rem;
+      }
+      .ring-w svg {
+        transform: rotate(-90deg);
+      }
+      .rbg {
+        fill: none;
+        stroke: var(--border);
+        stroke-width: 10;
+      }
+      .rfl {
+        fill: none;
+        stroke: url(#rg);
+        stroke-width: 10;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.6s;
+      }
+      .rc {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+      }
+      .rc .rp {
+        font-size: 1.8rem;
+        font-weight: 800;
+      }
+      .rc .rl {
+        font-size: 0.65rem;
+        color: var(--muted);
+      }
+      .rlab {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+      }
+      .rbd {
+        display: flex;
+        justify-content: center;
+        gap: 1.2rem;
+        margin-top: 0.6rem;
+      }
+      .rbi {
+        text-align: center;
+      }
+      .rbi .rv {
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+      .rbi .rl2 {
+        font-size: 0.6rem;
+        color: var(--muted);
+      }
+      .rv.easy {
+        color: var(--easy);
+      }
+      .rv.medium {
+        color: var(--medium);
+      }
+      .rv.hard {
+        color: var(--hard);
+      }
+
+      /* BADGES */
+      .badge-sec {
+        padding: 1rem 1.5rem;
+      }
+      .badge-sec h2 {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.6rem;
+      }
+      .bg-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 0.5rem;
+      }
+      .bc {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.65rem;
+        text-align: center;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+      .bc.earned {
+        border-color: var(--accent2);
+      }
+      .bc.earned::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(245, 158, 11, 0.06),
+          transparent
+        );
+      }
+      .bc.locked {
+        opacity: 0.3;
+      }
+      .bi {
+        font-size: 1.6rem;
+        margin-bottom: 0.2rem;
+      }
+      .bn {
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
+      .bd2 {
+        font-size: 0.6rem;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .bs {
+        font-size: 0.6rem;
+        margin-top: 0.3rem;
+        font-weight: 600;
+      }
+      .bs.es {
+        color: var(--accent2);
+      }
+      .bs.ls {
+        color: var(--muted);
+      }
+
+      /* LEADERBOARD */
+      .lb-sec {
+        padding: 1rem 1.5rem 2rem;
+      }
+      .lb-sec h2 {
+        font-size: 1rem;
+        margin-bottom: 0.6rem;
+      }
+      .lr {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.6rem 0.9rem;
+        margin-bottom: 0.4rem;
+        transition: all 0.2s;
+      }
+      .lr.you {
+        border-color: var(--accent);
+        background: rgba(124, 58, 237, 0.07);
+      }
+      .lrank {
+        font-size: 1rem;
+        font-weight: 800;
+        width: 28px;
+        text-align: center;
+      }
+      .lrank.g {
+        color: #fbbf24;
+      }
+      .lrank.s {
+        color: #94a3b8;
+      }
+      .lrank.br {
+        color: #d97706;
+      }
+      .lav {
+        font-size: 1.2rem;
+      }
+      .li {
+        flex: 1;
+      }
+      .ln {
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+      .lt2 {
+        font-size: 0.6rem;
+        color: var(--muted);
+      }
+      .lxp {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .llv {
+        font-size: 0.65rem;
+        color: var(--accent2);
+        margin-left: 0.2rem;
+      }
+
+      /* MILESTONES */
+      .ms-sec {
+        padding: 1rem 1.5rem;
+      }
+      .ms-sec h2 {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.6rem;
+      }
+      .mst {
+        position: relative;
+        padding-left: 22px;
+        border-left: 2px solid var(--border);
+        margin-left: 8px;
+      }
+      .msd {
+        position: absolute;
+        left: -7px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--border);
+        border: 2px solid var(--bg);
+      }
+      .msd.r {
+        background: var(--accent2);
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+      }
+      .mse {
+        padding: 0.4rem 0 0.6rem 0.6rem;
+      }
+      .mse .mt {
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+      .mse .md {
+        font-size: 0.65rem;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .mse.r .mt {
+        color: var(--accent2);
+      }
+      .mse.lk {
+        opacity: 0.35;
+      }
+
+      /* HEATMAP */
+      .hm-sec {
+        padding: 1rem 1.5rem;
+      }
+      .hm-sec h2 {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.6rem;
+      }
+      .hm-dl {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+        margin-bottom: 3px;
+      }
+      .hm-dl span {
+        text-align: center;
+        font-size: 0.55rem;
+        color: var(--muted);
+      }
+      .hm-g {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+      }
+      .hmc {
+        aspect-ratio: 1;
+        border-radius: 3px;
+        background: var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.55rem;
+        color: var(--muted);
+      }
+      .hmc.h1 {
+        background: rgba(34, 197, 94, 0.2);
+      }
+      .hmc.h2 {
+        background: rgba(34, 197, 94, 0.4);
+      }
+      .hmc.h3 {
+        background: rgba(34, 197, 94, 0.65);
+      }
+      .hmc.h4 {
+        background: rgba(34, 197, 94, 0.9);
+        color: #fff;
+      }
+      .hmc.today {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      .hm-lg {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.6rem;
+        font-size: 0.6rem;
+        color: var(--muted);
+      }
+      .hm-lc {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+      }
+
+      /* ACTIVITY */
+      .act-sec {
+        padding: 1rem 1.5rem 2rem;
+      }
+      .act-sec h2 {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.6rem;
+      }
+      .ai {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(45, 45, 68, 0.3);
+      }
+      .ai:last-child {
+        border-bottom: none;
+      }
+      .aic {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .atx {
+        font-size: 0.75rem;
+        line-height: 1.3;
+      }
+      .atm {
+        font-size: 0.6rem;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+
+      /* GUARDRAIL NOTICE */
+      .gr-notice {
+        background: rgba(124, 58, 237, 0.08);
+        border: 1px solid rgba(124, 58, 237, 0.2);
+        border-radius: 8px;
+        padding: 0.6rem 0.9rem;
+        margin: 0.5rem 1.5rem;
+        font-size: 0.7rem;
+        color: #c4b5fd;
+        line-height: 1.4;
+      }
+
+      /* CELEBRATION */
+      .co {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        pointer-events: none;
+        display: none;
+      }
+      .co.on {
+        display: block;
+      }
+      .cf {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        opacity: 0;
+      }
+      @keyframes cfall {
+        0% {
+          transform: translateY(0) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(100vh) rotate(720deg);
+          opacity: 0;
+        }
+      }
+      .wt {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        font-size: 2.2rem;
+        font-weight: 900;
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          var(--accent2),
+          var(--easy)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        z-index: 101;
+        pointer-events: none;
+        opacity: 0;
+        transition: all 0.35s;
+        text-align: center;
+      }
+      .wt.on {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+      .wt-sub {
+        display: block;
+        font-size: 0.9rem;
+        margin-top: 0.3rem;
+      }
+
+      @keyframes fgreen {
+        0% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+        }
+        70% {
+          box-shadow: 0 0 0 12px rgba(34, 197, 94, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+      }
+      .tc.flash {
+        animation: fgreen 0.4s ease;
+      }
+
+      /* RESPONSIVE */
+      @media (max-width: 600px) {
+        .srow {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .header,
+        .task-section,
+        .badge-sec,
+        .lb-sec,
+        .hm-sec,
+        .act-sec,
+        .ring-sec,
+        .ms-sec,
+        .cat-section,
+        .xp-w,
+        .gr-notice {
+          padding-left: 0.8rem;
+          padding-right: 0.8rem;
+        }
+        .tb {
+          font-size: 0.65rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- INTRO SCREEN -->
+    <div class="intro" id="intro">
+      <h1>⚔️ QuestBoard</h1>
+      <div class="intro-sub">
+        Rebuild the Digital Realm, one quest at a time.
+      </div>
+      <div class="lore">
+        You are a lone <strong>CodeSmith</strong> — the last of your order.<br /><br />
+        An ancient bug called <strong>The Void</strong> has shattered the
+        kingdom's source code. The <strong>Grand Interface</strong> lies in
+        ruins. The <strong>Algorithmic Spire</strong> has gone dark. And the
+        <strong>laundry golems</strong>… are wrinkled.<br /><br />
+        Complete your daily quests to push back The Void and restore the Realm.
+        <strong>Plan first. Build. Solve. Live.</strong> Balance is your
+        greatest weapon.
+      </div>
+      <button class="play-btn" onclick="startGame()">
+        ⚔️ Begin Today's Quests
+      </button>
+    </div>
+
+    <!-- MAIN GAME (hidden until start) -->
+    <div id="gameUI" style="display: none">
+      <div class="header">
+        <div>
+          <h1>⚔️ QuestBoard</h1>
+          <div class="sub">Rebuild the Digital Realm</div>
+        </div>
+        <div class="header-r">
+          <div class="dt" id="dateD"></div>
+          <div class="streak-pill" id="stPill">🔥 1-day streak</div>
+        </div>
+      </div>
+
+      <div class="xp-w">
+        <div class="xp-lbl">
+          <span id="xpCur">0 XP — Apprentice</span
+          ><span id="xpNxt">100 XP to Level 2</span>
+        </div>
+        <div class="xp-trk">
+          <div class="xp-fl" id="xpFl" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="tbar">
+        <div class="tb on" data-t="quests">⚔️ Quests</div>
+        <div class="tb" data-t="progress">📊 Progress</div>
+        <div class="tb" data-t="badges">🏆 Badges</div>
+        <div class="tb" data-t="board">🏅 Board</div>
+      </div>
+
+      <!-- ══ QUESTS ══ -->
+      <div class="tpanel on" id="p-quests">
+        <div class="srow">
+          <div class="st xp">
+            <div class="v" id="sXP">0</div>
+            <div class="l">XP</div>
+          </div>
+          <div class="st lv">
+            <div class="v" id="sLvl">1</div>
+            <div class="l">Level</div>
+          </div>
+          <div class="st sk">
+            <div class="v" id="sStr">1</div>
+            <div class="l">🔥 Streak</div>
+          </div>
+          <div class="st dn">
+            <div class="v" id="sDn">0/9</div>
+            <div class="l">Done</div>
+          </div>
+        </div>
+        <div class="gr-notice" id="grNotice">
+          📋 <strong>Complete "Daily Planning"</strong> first to unlock the rest
+          of your quest board.
+        </div>
+        <div id="taskArea"></div>
+      </div>
+
+      <!-- ══ PROGRESS ══ -->
+      <div class="tpanel" id="p-progress">
+        <div class="ring-sec">
+          <div class="rlab">Daily Quest Progress</div>
+          <div class="ring-w">
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <defs>
+                <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#7c3aed" />
+                  <stop offset="100%" stop-color="#f59e0b" />
+                </linearGradient>
+              </defs>
+              <circle class="rbg" cx="75" cy="75" r="65" />
+              <circle
+                class="rfl"
+                id="rFl"
+                cx="75"
+                cy="75"
+                r="65"
+                stroke-dasharray="408.41"
+                stroke-dashoffset="408.41"
+              />
+            </svg>
+            <div class="rc">
+              <div class="rp" id="rPct">0%</div>
+              <div class="rl">complete</div>
+            </div>
+          </div>
+          <div class="rbd">
+            <div class="rbi">
+              <div class="rv easy" id="rbE">0/4</div>
+              <div class="rl2">Easy</div>
+            </div>
+            <div class="rbi">
+              <div class="rv medium" id="rbM">0/4</div>
+              <div class="rl2">Medium</div>
+            </div>
+            <div class="rbi">
+              <div class="rv hard" id="rbH">0/1</div>
+              <div class="rl2">Hard</div>
+            </div>
+          </div>
+        </div>
+        <div class="hm-sec">
+          <h2>📅 This Week</h2>
+          <div class="hm-dl">
+            <span>M</span><span>T</span><span>W</span><span>T</span
+            ><span>F</span><span>S</span><span>S</span>
+          </div>
+          <div class="hm-g" id="hmG"></div>
+          <div class="hm-lg">
+            <span>Less</span>
+            <div class="hm-lc" style="background: var(--border)"></div>
+            <div class="hm-lc" style="background: rgba(34, 197, 94, 0.2)"></div>
+            <div class="hm-lc" style="background: rgba(34, 197, 94, 0.4)"></div>
+            <div
+              class="hm-lc"
+              style="background: rgba(34, 197, 94, 0.65)"
+            ></div>
+            <div class="hm-lc" style="background: rgba(34, 197, 94, 0.9)"></div>
+            <span>More</span>
+          </div>
+        </div>
+        <div class="ms-sec">
+          <h2>🎯 XP Milestones</h2>
+          <div class="mst" id="msT"></div>
+        </div>
+        <div class="act-sec">
+          <h2>📜 Activity Log</h2>
+          <div id="aLog"></div>
+        </div>
+      </div>
+
+      <!-- ══ BADGES ══ -->
+      <div class="tpanel" id="p-badges">
+        <div class="badge-sec">
+          <h2>🏆 Badges — <span id="bCount">0/12</span> earned</h2>
+          <div class="bg-grid" id="bGrid"></div>
+        </div>
+      </div>
+
+      <!-- ══ LEADERBOARD ══ -->
+      <div class="tpanel" id="p-board">
+        <div class="lb-sec">
+          <h2>🏅 Realm Leaderboard</h2>
+          <div id="lbList"></div>
+        </div>
+      </div>
+    </div>
+    <!-- end gameUI -->
+
+    <!-- CELEBRATION -->
+    <div class="co" id="cOv"></div>
+    <div class="wt" id="wTx"></div>
+
+    <script>
+      // ── CONSTANTS ──
+      const TITLES = [
+        "Apprentice",
+        "Adventurer",
+        "Pathfinder",
+        "Crafter",
+        "Architect",
+        "Warden",
+        "Champion",
+        "Vanguard",
+        "Paragon",
+        "Legend",
+        "Mythic",
+        "Ascendant",
+      ];
+      const LVLS = {
+        easy: { l: "Easy", c: "easy", pts: [15, 20, 20, 20] },
+        medium: { l: "Medium", c: "medium", pts: 50 },
+        hard: { l: "Hard", c: "hard", pts: 100 },
+      };
+      // Overkill but not used for hard anymore; each task has its own pts
+
+      const TASKS = [
+        // LIFE category (green) — must do planning first
+        {
+          id: 1,
+          title: "Daily planning: prioritize 3 tasks",
+          level: "easy",
+          icon: "📋",
+          cat: "life",
+          region: "Command Tent",
+          pts: 15,
+          needs: null,
+          order: 0,
+        },
+        {
+          id: 2,
+          title: "Fold laundry",
+          level: "easy",
+          icon: "👕",
+          cat: "life",
+          region: "Chaos Quarter",
+          pts: 20,
+          needs: 1,
+          order: 1,
+        },
+        {
+          id: 9,
+          title: "10-min walk / stretch break",
+          level: "easy",
+          icon: "🚶",
+          cat: "life",
+          region: "Training Grounds",
+          pts: 20,
+          needs: 1,
+          order: 1,
+        },
+        // BUILD category (purple)
+        {
+          id: 7,
+          title: "Build: Core layout & components",
+          level: "medium",
+          icon: "💻",
+          cat: "build",
+          region: "Grand Interface",
+          pts: 50,
+          needs: 1,
+          order: 2,
+        },
+        {
+          id: 8,
+          title: "Build: Wire up interactivity & polish",
+          level: "medium",
+          icon: "✨",
+          cat: "build",
+          region: "Grand Interface",
+          pts: 50,
+          needs: 7,
+          order: 3,
+        },
+        // GRIND category (amber) — chain
+        {
+          id: 3,
+          title: "LeetCode Q1 — Medium",
+          level: "medium",
+          icon: "🧠",
+          cat: "grind",
+          region: "Algorithmic Spire",
+          pts: 50,
+          needs: 1,
+          chain: 1,
+          order: 2,
+        },
+        {
+          id: 4,
+          title: "LeetCode Q2 — Medium",
+          level: "medium",
+          icon: "🧠",
+          cat: "grind",
+          region: "Algorithmic Spire",
+          pts: 50,
+          needs: 3,
+          chain: 2,
+          order: 3,
+        },
+        {
+          id: 5,
+          title: "LeetCode Q3 — Medium",
+          level: "medium",
+          icon: "🧠",
+          cat: "grind",
+          region: "Algorithmic Spire",
+          pts: 50,
+          needs: 4,
+          chain: 3,
+          order: 4,
+        },
+        {
+          id: 6,
+          title: "LeetCode Q4 — Medium",
+          level: "medium",
+          icon: "🧠",
+          cat: "grind",
+          region: "Algorithmic Spire",
+          pts: 50,
+          needs: 5,
+          chain: 4,
+          order: 5,
+        },
+      ];
+
+      const CATS = [
+        { key: "life", icon: "🌿", label: "Life", cls: "life" },
+        { key: "build", icon: "🔨", label: "Build", cls: "build" },
+        { key: "grind", icon: "🧠", label: "Grind", cls: "grind" },
+      ];
+
+      const BADGES = [
+        {
+          id: "first",
+          icon: "🌟",
+          name: "First Quest",
+          desc: "Complete your first task",
+          cond: (s) => s.done.size >= 1,
+        },
+        {
+          id: "planner",
+          icon: "📋",
+          name: "Strategist",
+          desc: "Complete daily planning",
+          cond: (s) => s.done.has(1),
+        },
+        {
+          id: "half",
+          icon: "🛡️",
+          name: "Halfway Hero",
+          desc: "Complete 50% of quests",
+          cond: (s) => s.done.size >= 5,
+        },
+        {
+          id: "threeq",
+          icon: "⚔️",
+          name: "Realm Defender",
+          desc: "Complete 75% of quests",
+          cond: (s) => s.done.size >= 7,
+        },
+        {
+          id: "all",
+          icon: "👑",
+          name: "Quest Master",
+          desc: "Complete all daily quests",
+          cond: (s) => s.done.size >= TASKS.length,
+        },
+        {
+          id: "coder",
+          icon: "💻",
+          name: "Code Warrior",
+          desc: "Build the Grand Interface",
+          cond: (s) => s.done.has(7) && s.done.has(8),
+        },
+        {
+          id: "grinder",
+          icon: "🧠",
+          name: "LeetCode Grinder",
+          desc: "Clear all 4 Spire floors",
+          cond: (s) => [3, 4, 5, 6].every((i) => s.done.has(i)),
+        },
+        {
+          id: "laundry",
+          icon: "🧺",
+          name: "Fresh & Clean",
+          desc: "Tame the laundry golems",
+          cond: (s) => s.done.has(2),
+        },
+        {
+          id: "balanced",
+          icon: "⚖️",
+          name: "Balanced CodeSmith",
+          desc: "1 task from each category",
+          cond: (s) => hasOneEach(s),
+        },
+        {
+          id: "spire",
+          icon: "🗼",
+          name: "Spire Master",
+          desc: "Full LC chain, no breaks",
+          cond: (s) => s.chainBonus,
+        },
+        {
+          id: "walk",
+          icon: "🚶",
+          name: "Energy Renewed",
+          desc: "Take a walk/stretch break",
+          cond: (s) => s.done.has(9),
+        },
+        {
+          id: "level5",
+          icon: "🏗️",
+          name: "Architect",
+          desc: "Reach Level 5",
+          cond: (s) => getLvl(s.xp).level >= 5,
+        },
+      ];
+
+      const MS = [
+        { xp: 100, t: "100 XP", d: "Realm flickers with first light" },
+        { xp: 250, t: "250 XP", d: "Citizens take notice" },
+        { xp: 500, t: "500 XP", d: "Structures begin to reform" },
+        { xp: 1000, t: "1,000 XP", d: "The Spire's foundation rebuilds" },
+        { xp: 2000, t: "2,000 XP", d: "The Interface takes shape" },
+        { xp: 5000, t: "5,000 XP", d: "The Void begins to weaken" },
+        { xp: 10000, t: "10,000 XP", d: "The Realm is truly alive" },
+      ];
+
+      const OTS = [
+        {
+          name: "Aria Stormweaver",
+          title: "Champion",
+          av: "🧙",
+          xp: 4200,
+          lv: 7,
+        },
+        { name: "Kael Ironforge", title: "Warden", av: "⚔️", xp: 2800, lv: 6 },
+        {
+          name: "Luna Spellcraft",
+          title: "Crafter",
+          av: "🌙",
+          xp: 1100,
+          lv: 4,
+        },
+        {
+          name: "Rex Thunderblade",
+          title: "Pathfinder",
+          av: "🛡️",
+          xp: 600,
+          lv: 3,
+        },
+        {
+          name: "Nova Ashwalker",
+          title: "Adventurer",
+          av: "💫",
+          xp: 350,
+          lv: 2,
+        },
+        {
+          name: "Zephyr Codemind",
+          title: "Apprentice",
+          av: "🌀",
+          xp: 120,
+          lv: 2,
+        },
+      ];
+
+      const WDATA = [4, 6, 2, 6, 5, 0, 0];
+
+      // ── STATE ──
+      let S = {
+        xp: 0,
+        done: new Set(),
+        streak: 1,
+        log: [],
+        chainBonus: false,
+        prevBadges: new Set(),
+      };
+
+      function getLvl(xp) {
+        let l = 1,
+          n = 100;
+        while (xp >= n) {
+          xp -= n;
+          l++;
+          n = Math.floor(n * 1.5);
+        }
+        return { level: l, cur: xp, need: n };
+      }
+      function getTitle(l) {
+        return TITLES[Math.min(l, TITLES.length) - 1] || "Ascendant";
+      }
+      function now() {
+        return new Date().toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+      }
+      function hasOneEach(s) {
+        let c = new Set();
+        TASKS.forEach((t) => {
+          if (s.done.has(t.id)) c.add(t.cat);
+        });
+        return c.size >= 3;
+      }
+
+      function isUnlocked(task) {
+        if (!task.needs) return true;
+        return S.done.has(task.needs);
+      }
+
+      function startGame() {
+        document.getElementById("intro").classList.add("hide");
+        setTimeout(() => {
+          document.getElementById("intro").style.display = "none";
+          document.getElementById("gameUI").style.display = "block";
+          render();
+        }, 600);
+      }
+
+      function render() {
+        // Date
+        document.getElementById("dateD").textContent =
+          new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          });
+        document.getElementById(
+          "stPill"
+        ).textContent = `🔥 ${S.streak}-day streak`;
+
+        // Stats
+        const lv = getLvl(S.xp);
+        document.getElementById("sXP").textContent = S.xp;
+        document.getElementById("sLvl").textContent = lv.level;
+        document.getElementById("sStr").textContent = S.streak;
+        document.getElementById(
+          "sDn"
+        ).textContent = `${S.done.size}/${TASKS.length}`;
+
+        // XP bar
+        const pct = lv.need > 0 ? Math.min((lv.cur / lv.need) * 100, 100) : 0;
+        document.getElementById("xpFl").style.width = pct + "%";
+        document.getElementById("xpCur").textContent = `${
+          lv.cur
+        } XP — ${getTitle(lv.level)}`;
+        document.getElementById("xpNxt").textContent = `${
+          lv.need - lv.cur
+        } XP to Level ${lv.level + 1} (${getTitle(lv.level + 1)})`;
+
+        // Guardrail notice
+        const gr = document.getElementById("grNotice");
+        if (S.done.has(1)) {
+          gr.style.display = "none";
+        } else {
+          gr.style.display = "block";
+        }
+
+        // Tasks by category
+        let html = "";
+        CATS.forEach((cat) => {
+          const tasks = TASKS.filter((t) => t.cat === cat.key);
+          const catDone = tasks.filter((t) => S.done.has(t.id)).length;
+          const catPct = Math.round((catDone / tasks.length) * 100);
+          html += `<div class="cat-section"><div class="cat-header"><span class="cat-icon">${cat.icon}</span><span class="cat-lbl ${cat.cls}">${cat.label}</span></div><div class="cat-bar"><div class="cat-bar-fill ${cat.cls}" style="width:${catPct}%"></div></div><div class="cat-pct">${catDone}/${tasks.length} — ${catPct}%</div></div>`;
+          html += '<div class="task-section">';
+          tasks.forEach((t) => {
+            const done = S.done.has(t.id);
+            const unlocked = isUnlocked(t);
+            const needsPlanning = t.id !== 1 && !S.done.has(1);
+            const locked = !unlocked || (needsPlanning && !done);
+            const isNeeded = t.id === 1 && !done;
+            const cls = done
+              ? "done"
+              : locked
+              ? "locked"
+              : isNeeded
+              ? "needed"
+              : "";
+            const chainLabel = t.chain
+              ? `<span class="chain-badge">Chain ${t.chain}/4</span>`
+              : "";
+            let lockMsg = "";
+            if (!done && needsPlanning)
+              lockMsg =
+                '<div class="lock-reason">🔒 Complete "Daily Planning" first</div>';
+            else if (!done && !unlocked) {
+              const dep = TASKS.find((d) => d.id === t.needs);
+              lockMsg = `<div class="lock-reason">🔒 Complete "${dep.title}" first</div>`;
+            }
+            html += `<div class="tc ${cls}" ${
+              !locked ? `onclick="toggleTask(${t.id})"` : ""
+            } id="tc-${t.id}">
+        <div class="tchk">${done ? "✓" : locked ? "🔒" : ""}</div>
+        <div class="ti">
+          <div class="tt">${t.icon} ${t.title}</div>
+          <div class="tm">
+            <span class="lt ${LVLS[t.level].c}">${LVLS[t.level].l}</span>
+            <span class="cat-dot ${cat.cls}"></span>
+            <span class="tpts">+${t.pts} XP</span>
+            ${chainLabel}
+          </div>
+          ${lockMsg}
+        </div>
+        <div class="tr"><div class="bg">${
+          t.pts
+        }</div><div class="sm">XP</div></div>
+      </div>`;
+          });
+          html += "</div>";
+        });
+        document.getElementById("taskArea").innerHTML = html;
+
+        // Progress ring
+        const totalPct = Math.round((S.done.size / TASKS.length) * 100);
+        const circ = 2 * Math.PI * 65;
+        const off = circ - (totalPct / 100) * circ;
+        document.getElementById("rFl").style.strokeDashoffset = off;
+        document.getElementById("rPct").textContent = totalPct + "%";
+        const eD = TASKS.filter(
+          (t) => t.level === "easy" && S.done.has(t.id)
+        ).length;
+        const mD = TASKS.filter(
+          (t) => t.level === "medium" && S.done.has(t.id)
+        ).length;
+        const hD = TASKS.filter(
+          (t) => t.level === "hard" && S.done.has(t.id)
+        ).length;
+        const eT = TASKS.filter((t) => t.level === "easy").length;
+        const mT = TASKS.filter((t) => t.level === "medium").length;
+        const hT = TASKS.filter((t) => t.level === "hard").length;
+        document.getElementById("rbE").textContent = `${eD}/${eT}`;
+        document.getElementById("rbM").textContent = `${mD}/${mT}`;
+        document.getElementById("rbH").textContent = `${hD}/${hT}`;
+
+        // Heatmap
+        const td = new Date();
+        const dow = td.getDay() === 0 ? 6 : td.getDay() - 1;
+        const wd = [...WDATA];
+        wd[dow] = S.done.size;
+        document.getElementById("hmG").innerHTML = wd
+          .map((v, i) => {
+            const h =
+              v >= 7
+                ? "h4"
+                : v >= 5
+                ? "h3"
+                : v >= 3
+                ? "h2"
+                : v >= 1
+                ? "h1"
+                : "";
+            const isT = i === dow ? " today" : "";
+            return `<div class="hmc ${h}${isT}" title="${v} quests">${v}</div>`;
+          })
+          .join("");
+
+        // Milestones
+        document.getElementById("msT").innerHTML = MS.map((m) => {
+          const r = S.xp >= m.xp;
+          return `<div class="msd ${r ? "r" : ""}"></div><div class="mse ${
+            r ? "r" : "lk"
+          }"><div class="mt">${r ? "✅" : "🔒"} ${m.t}</div><div class="md">${
+            m.d
+          }</div></div>`;
+        }).join("");
+
+        // Badges
+        const earned = BADGES.filter((b) => b.cond(S));
+        document.getElementById(
+          "bCount"
+        ).textContent = `${earned.length}/${BADGES.length}`;
+        document.getElementById("bGrid").innerHTML = BADGES.map((b) => {
+          const e = b.cond(S);
+          return `<div class="bc ${e ? "earned" : "locked"}"><div class="bi">${
+            b.icon
+          }</div><div class="bn">${b.name}</div><div class="bd2">${
+            b.desc
+          }</div><div class="bs ${e ? "es" : "ls"}">${
+            e ? "✅ Earned" : "🔒 Locked"
+          }</div></div>`;
+        }).join("");
+
+        // Leaderboard
+        const you = {
+          name: "You",
+          title: getTitle(lv.level),
+          av: "⚔️",
+          xp: S.xp,
+          lv: lv.level,
+          isY: true,
+        };
+        const all = [...OTS, you].sort((a, b) => b.xp - a.xp);
+        const ri = ["🥇", "🥈", "🥉"];
+        document.getElementById("lbList").innerHTML = all
+          .map((p, i) => {
+            const rc = i === 0 ? "g" : i === 1 ? "s" : i === 2 ? "br" : "";
+            return `<div class="lr ${
+              p.isY ? "you" : ""
+            }"><div class="lrank ${rc}">${
+              i < 3 ? ri[i] : i + 1
+            }</div><div class="lav">${
+              p.av
+            }</div><div class="li"><div class="ln">${p.name}${
+              p.isY ? " (You)" : ""
+            }</div><div class="lt2">${
+              p.title
+            }</div></div><div><span class="lxp">${p.xp.toLocaleString()} XP</span><span class="llv">Lvl ${
+              p.lv
+            }</span></div></div>`;
+          })
+          .join("");
+
+        // Activity log
+        const al = document.getElementById("aLog");
+        if (!S.log.length) {
+          al.innerHTML =
+            '<div style="color:var(--muted);font-size:.75rem;padding:.8rem 0">No activity yet. Complete a quest!</div>';
+        } else {
+          al.innerHTML = S.log
+            .slice()
+            .reverse()
+            .map(
+              (l) =>
+                `<div class="ai"><div class="aic">${l.icon}</div><div><div class="atx">${l.text}</div><div class="atm">${l.time}</div></div></div>`
+            )
+            .join("");
+        }
+      }
+
+      function toggleTask(id) {
+        const task = TASKS.find((t) => t.id === id);
+        if (!task) return;
+        const card = document.getElementById("tc-" + id);
+
+        if (S.done.has(id)) {
+          // Uncheck — but warn if others depend on it
+          const deps = TASKS.filter((t) => t.needs === id && S.done.has(t.id));
+          if (deps.length > 0) {
+            if (
+              !confirm(
+                `This will also undo: ${deps
+                  .map((d) => d.title)
+                  .join(", ")}. Continue?`
+              )
+            )
+              return;
+            deps.forEach((d) => {
+              S.done.delete(d.id);
+              S.xp -= d.pts;
+              S.log.push({
+                icon: "↩️",
+                text: `Undid "${d.title}" (−${d.pts} XP)`,
+                time: now(),
+              });
+            });
+          }
+          S.done.delete(id);
+          S.xp -= task.pts;
+          S.log.push({
+            icon: "↩️",
+            text: `Undid "${task.title}" (−${task.pts} XP)`,
+            time: now(),
+          });
+          render();
+          return;
+        }
+
+        // Check if unlocked
+        if (!isUnlocked(task)) return;
+        if (id !== 1 && !S.done.has(1)) return;
+
+        S.done.add(id);
+        S.xp += task.pts;
+
+        card.classList.add("flash");
+        setTimeout(() => card.classList.remove("flash"), 400);
+
+        // Log
+        S.log.push({
+          icon: task.icon,
+          text: `Completed "${task.title}" — +${task.pts} XP`,
+          time: now(),
+        });
+
+        // Flavor
+        const flavors = {
+          1: "You survey the Realm. Priorities set. The path is clear.",
+          2: "The laundry golems collapse into neat stacks. Order restored.",
+          7: "The Grand Interface flickers to life! Citizens can see the Realm again.",
+          8: "Interactivity pulses through the Interface. The Void recoils.",
+          3: "Spire Floor 1 unlocked. Ancient algorithms hum to life.",
+          4: 'Spire Floor 2 unlocked. The Architect whispers: "Continue."',
+          5: "Spire Floor 3 unlocked. Power courses through the stone.",
+          6: 'Spire Floor 4 unlocked. The Architect: "You are worthy."',
+          9: "Energy restored. Your body thanks you. Tomorrow's focus strengthens.",
+        };
+        if (flavors[id])
+          S.log.push({ icon: "📖", text: flavors[id], time: now() });
+
+        // Chain bonus check
+        if ([3, 4, 5, 6].every((i) => S.done.has(i)) && !S.chainBonus) {
+          S.chainBonus = true;
+          S.xp += 30;
+          S.log.push({
+            icon: "🗼",
+            text: "Spire Master bonus! +30 XP — Full chain complete!",
+            time: now(),
+          });
+        }
+
+        // Balanced day check
+        if (hasOneEach(S)) {
+          const had = S.log.some((l) => l.text.includes("Balanced CodeSmith"));
+          if (!had) {
+            S.xp += 25;
+            S.log.push({
+              icon: "⚖️",
+              text: "Balanced CodeSmith bonus! +25 XP — One task from each category!",
+              time: now(),
+            });
+          }
+        }
+
+        // Badge check
+        const prevCount = S.prevBadges.size;
+        BADGES.forEach((b) => {
+          if (b.cond(S)) S.prevBadges.add(b.id);
+        });
+        const newBadges = BADGES.filter(
+          (b) => b.cond(S) && !S.prevBadges.has(b.id)
+        );
+
+        render();
+
+        // Celebrations
+        if (S.done.size === TASKS.length) {
+          celebrate(
+            "👑 ALL QUESTS COMPLETE!",
+            "Legendary day — The Realm is restored!"
+          );
+        } else if (S.done.size >= 7 && S.done.size < TASKS.length) {
+          celebrate("⚔️ Realm Defender!", "75% of quests done");
+        } else if (S.done.size >= 5 && S.done.size < 7) {
+          miniCelebrate("🛡️ Halfway Hero!", "50% complete");
+        } else if (id === 7 && S.done.has(8)) {
+          celebrate("💻 Code Warrior!", "Grand Interface rebuilt");
+        } else if ([3, 4, 5, 6].every((i) => S.done.has(i))) {
+          celebrate("🧠 LeetCode Grinder!", "All 4 Spire floors cleared");
+        } else if (newBadges.length) {
+          const nb = newBadges[0];
+          miniCelebrate(`${nb.icon} ${nb.name}!`, nb.desc);
+        }
+      }
+
+      // ── CELEBRATIONS ──
+      function celebrate(text, sub) {
+        const ov = document.getElementById("cOv"),
+          wt = document.getElementById("wTx");
+        ov.innerHTML = "";
+        ov.classList.add("on");
+        const cols = [
+          "#7c3aed",
+          "#f59e0b",
+          "#22c55e",
+          "#ef4444",
+          "#38bdf8",
+          "#ec4899",
+        ];
+        for (let i = 0; i < 80; i++) {
+          const c = document.createElement("div");
+          c.className = "cf";
+          c.style.left = Math.random() * 100 + "%";
+          c.style.top = "-10px";
+          c.style.background = cols[Math.floor(Math.random() * cols.length)];
+          c.style.width = 6 + Math.random() * 8 + "px";
+          c.style.height = 6 + Math.random() * 8 + "px";
+          c.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+          c.style.animation = `cfall ${1.5 + Math.random() * 2}s ease-out ${
+            Math.random() * 0.8
+          }s forwards`;
+          ov.appendChild(c);
+        }
+        wt.innerHTML = `${text}<span class="wt-sub">${sub}</span>`;
+        wt.classList.add("on");
+        setTimeout(() => {
+          ov.classList.remove("on");
+          wt.classList.remove("on");
+        }, 3200);
+      }
+
+      function miniCelebrate(text, sub) {
+        const wt = document.getElementById("wTx");
+        wt.innerHTML = `${text}<span class="wt-sub">${sub}</span>`;
+        wt.classList.add("on");
+        setTimeout(() => wt.classList.remove("on"), 1800);
+      }
+
+      // ── TABS ──
+      document.querySelectorAll(".tb").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tb")
+            .forEach((t) => t.classList.remove("on"));
+          document
+            .querySelectorAll(".tpanel")
+            .forEach((p) => p.classList.remove("on"));
+          tab.classList.add("on");
+          document.getElementById("p-" + tab.dataset.t).classList.add("on");
+        });
+      });
+
+      // INIT (don't render game until start)
+    </script>
+  </body>
+</html>

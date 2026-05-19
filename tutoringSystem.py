@@ -23,7 +23,7 @@ _SYSTEM_PROMPTS: dict[str, str] = {
     "ONBOARDING_ACK": (
         "You are a warm, encouraging CS tutor. "
         "The student has just told you their topic and proficiency level. "
-        "Write 1-2 natural, conversational sentences that acknowledge their choice "
+        "Write 1-2 natural, neutral tone conversational sentences that acknowledge their choice "
         "and let them know you're about to give them a question. "
         "Do NOT generate the question itself — just the bridging remark."
     ),
@@ -31,17 +31,27 @@ _SYSTEM_PROMPTS: dict[str, str] = {
     "CORRECT_FIRST_TRY": (
         "You are an encouraging CS tutor. "
         "The student just answered a multiple-choice question correctly on their first try. "
-        "Write 1-2 sentences: briefly acknowledge that they got it right (you may name "
-        "the correct answer), then ask ONE open reflective question that invites them to "
-        "articulate *why* that answer is correct. "
+        "Write 1-2 sentences: briefly acknowledge they got it right (you may name the "
+        "letter, e.g. 'Nice — B is right.'), then ask ONE open Socratic question that "
+        "asks the student to produce their reasoning. "
+        "CRITICAL: do NOT restate, paraphrase, summarise, or hint at the content of the "
+        "correct option. The student must generate the reasoning themselves; you are not "
+        "confirming or supplying it. "
+        "Prefer forms like 'What made you pick that one?', 'How would you explain this "
+        "choice to a classmate?', or 'What's the core idea behind your answer?'. "
+        "Avoid leading questions that embed the answer (e.g. 'How does increasing X "
+        "affect Y?' when the answer is 'increasing X'). "
         "Keep it conversational — no bullet points."
     ),
     # Correct after one or more scaffold hints — acknowledge persistence.
     "CORRECT_AFTER_HINTS": (
         "You are an encouraging CS tutor. "
         "The student has just answered correctly after receiving hints. "
-        "Write 1-2 sentences: warmly acknowledge their persistence in working through "
-        "the hints, then ask which part of the explanation helped them see the answer. "
+        "Write 1-2 sentences: warmly acknowledge their persistence, then ask which part "
+        "of the discussion helped them see it. "
+        "CRITICAL: do NOT restate, paraphrase, or hint at the content of the correct "
+        "option. Ask about the student's reasoning process or which hint clicked, not "
+        "about the concept itself. "
         "Keep it conversational — no bullet points."
     ),
     # After the forced EXPLAIN path — invite reflection, do NOT re-explain.
@@ -59,12 +69,13 @@ _SYSTEM_PROMPTS: dict[str, str] = {
         "'I'm done', or 'move on' whenever they want a new question. "
         "Keep it under three sentences."
     ),
-    # Intent classifier — returns only the word NEXT or CONTINUE.
     "NEXT_Q_INTENT": (
         "You are an intent classifier for a tutoring system. "
         "The student is in the reflection phase after answering a question. "
-        "Decide whether their message expresses a desire to move on to a new question "
-        "(NEXT) or to continue the current reflection (CONTINUE). "
+        "Decide whether their message expresses a CLEAR, EXPLICIT desire to move on to a new question "
+        "(e.g., 'next', 'move on', 'another one', 'skip'). "
+        "If they are answering a reflection question, discussing the concept, or if you are UNSURE, "
+        "you MUST output CONTINUE. "
         "Respond with ONLY the single word NEXT or CONTINUE — nothing else."
     ),
     "EXPLAIN": (
@@ -142,7 +153,7 @@ class MisconceptionTutoringSystem:
         print(f"[state] {session.mode}")
         return session.session_id, (
             "Hi! I'm your CS tutor.\n"
-            "What topic would you like to practise? "
+            "What topic would you like to practice? "
             "Also tell me your proficiency level: beginner, intermediate, or proficient."
         )
 
@@ -207,7 +218,7 @@ class MisconceptionTutoringSystem:
         if not topic:
             return (
                 "I didn't catch the topic. Please tell me which CS topic "
-                "you'd like to practise and your level "
+                "you'd like to practice and your level "
                 "(beginner / intermediate / proficient)."
             )
         if prof not in {"beginner", "intermediate", "proficient"}:
@@ -303,9 +314,11 @@ class MisconceptionTutoringSystem:
                     f"Topic: {session.topic}\n"
                     f"Bloom level: {session.bloom_level}\n"
                     f"Question: {session.current_question}\n"
-                    f"Correct answer: {session.correct_option}) {session.correct_answer}\n"
-                    f"Student answered: {letter}\n\n"
-                    "Acknowledge they got it right and ask one reflective question."
+                    f"Student picked: {letter} (correct)\n\n"
+                    "Acknowledge briefly and ask one Socratic follow-up about the "
+                    "student's own reasoning. Do NOT mention, restate, or paraphrase "
+                    "what the correct option says — the student must produce the "
+                    "reasoning, not have it handed back to them."
                 ),
                 system_prompt=_sys("CORRECT_FIRST_TRY"),
             )
@@ -441,6 +454,6 @@ class MisconceptionTutoringSystem:
             f"Correct answer: {session.correct_option}) {session.correct_answer}\n"
             f"Student's reflection: {user_input}\n\n"
             "Ask one short follow-up reflection question, "
-            "or invite them to type 'next question' to continue practising."
+            "or invite them to type 'next question' to continue practicing."
         )
         return chat(session.session_id, prompt, system_prompt=_sys("REFLECTION"))

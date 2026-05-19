@@ -270,10 +270,10 @@ Do not reveal the correct answer.
 
     def _support_system_prompt(self, strategy: Strategy) -> str:
         prompts = {
-            "SOCRATIC": "You ask one focused Socratic question without revealing the answer.",
-            "CONTRAST": "You compare the student's incorrect reasoning with the correct conceptual distinction without revealing the final answer.",
-            "WORKED_EXAMPLE": "You provide a short worked example that helps the student reason toward the answer without directly revealing it.",
-            "EXPLAIN": "You give a clear direct explanation and may reveal the answer.",
+            "SOCRATIC": "You MUST NOT provide any explanation or preamble. You MUST ask exactly one focused Socratic question related to the Question that forces the student to rethink their assumption without giving away the answer.",
+            "CONTRAST": "You MUST highlight the conceptual difference between the option corresponding to student's answer and the actual mechanism, without giving away the final answer.",
+            "WORKED_EXAMPLE": "You MUST provide a brief, analogous scenario or a simplified example that illustrates the underlying concept of correct answer without directly revealing the answer.",
+            "EXPLAIN": "You MUST give a clear direct explanation and may reveal the answer.",
         }
         return prompts[strategy]
 
@@ -298,6 +298,7 @@ Scaffold level: {scaffold_level}
 Topic: {session.topic}
 Question concept: {concept_key}
 Question: {session.current_question}
+Question Options: {session.options}
 Correct answer: {session.correct_answer}
 Student answer: {user_input}
 Likely misunderstanding: {misunderstanding}
@@ -308,10 +309,11 @@ Ontology context:
 Wikipedia links:
 {chr(10).join(context.wikipedia_links) if context.wikipedia_links else "None"}
 
-Write one tutor response that is grounded in the ontology context when available.
-Use 2-4 sentences.
-Do not reveal the answer directly unless the strategy is EXPLAIN.
-If no ontology concept is grounded, give a general conceptual hint and do not pretend the ontology supplied evidence.
+Write ONE tutor response that is grounded in the ontology context. Follow these strict rules:
+1. CRITICAL: NEVER reveal, explain, or heavily hint at the correct answer (unless strategy is EXPLAIN).
+2. Use 1-3 sentences maximum.
+3. If no ontology concept is provided, give a general conceptual response without pretending the ontology supplied evidence.
+4. {self._support_system_prompt(strategy)}
 """.strip()
 
         message = self.chat(

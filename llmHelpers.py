@@ -92,7 +92,7 @@ Create_question = "How would you design a plan to prevent overfitting in a machi
 
 
 bloom_prompt =  f"""
-The following are Bloom’s skills and some example questions corresponding to different levels if the User_Topic was 'overfitting':
+The following are Bloom’s skills and some example questions showing the framework fitting each skill level:
 
 1. Skill: Remember, Example: {Remember_question}
 2. Skill: Understand, Example: {Understand_question}
@@ -100,11 +100,16 @@ The following are Bloom’s skills and some example questions corresponding to d
 4. Skill: Analyze, Example: {Analyze_question}
 5. Skill: Evaluate, Example: {Evaluate_question}
 6. Skill: Create, Example: {Create_question}
+These questions are created to evaluate students on a range of cognitive skills, from basic knowledge to critical thinking and problem-solving.
+You are supposed to create ONE multiple choice question (with options) corresponding to the user_skill level in revised Bloom’s taxonomy.
+
+CRITICAL INSTRUCTIONS FOR ORIGINALITY:
+1. The examples above are strictly to illustrate the *cognitive depth* required for each level. 
+3. Write an original, highly specific, and creative question about the User_Topic. 
+4. The question MUST be exclusively about the User_Topic. 
+Keep the answer choices short and to the point.
 User_Topic = {{topic}}
 user_skill = {{skill}}
-You are supposed to create one multiple choice question along with options corresponding to user_skill in revised Bloom’s taxonomy for the User_Topic. 
-Keep the answer choices short and to the point.
-These questions are created to evaluate students on a range of cognitive skills, from basic knowledge to critical thinking and problem-solving.
 """
 
 #dictionary of dictionaries - to increase difficulty level as per user request
