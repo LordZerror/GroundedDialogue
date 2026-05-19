@@ -1,1 +1,22 @@
+# Environments
 .venv/
+env/
+venv/
+.env
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# DeepEval telemetry and cache
+.deepeval/
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+*.swp
